@@ -16,9 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="static/landing/shirt-photo.jpg" width="210" alt="A shirt photographed on a hanger">
-  &nbsp;&nbsp;➜&nbsp;&nbsp;
-  <img src="static/landing/shirt-tidy.jpg" width="210" alt="The same shirt, tidied into a catalogue shot">
+  <img src="screenshots/before-after.png" width="520" alt="A shirt photographed on a hanger, and the same shirt tidied into a catalogue shot">
 </p>
 
 <p align="center">
