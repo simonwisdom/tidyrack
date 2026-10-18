@@ -60,7 +60,8 @@ SECURITY_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    # The camera only for Tidyrack's own page: Add item's camera on a phone.
+    "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
 }
 
 log = logging.getLogger("uvicorn.error")
@@ -559,7 +560,8 @@ def create_app(store: Store, pipeline=ai, warm_up: bool = False, run=None,
 
     @app.post("/api/items/{item_id}/finish")
     def finish_item(item_id: str, user=Depends(current_user)):
-        """Done adding photos: read the details again from all of them."""
+        """No more photos coming (the item was closed, or the camera moved on): read
+        the details again from all of them."""
         item = item_or_404(item_id, user)
         store.finish(item_id)
         if len(item["photos"]) > 1:

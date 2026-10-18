@@ -37,6 +37,12 @@
     <button type="button" class="ghost small" id="old-key-done">Done</button>
   </div>
 
+  <div class="notice" id="check-new" hidden>
+    <span id="check-new-text"></span>
+    <button type="button" class="primary small" id="check-new-go">Check them</button>
+    <button type="button" class="ghost small" id="check-new-close" aria-label="Dismiss">×</button>
+  </div>
+
   <section class="sign-in" id="sign-in" hidden>
     <h2 class="sign-in-title">Your wardrobe, catalogued from a photo</h2>
     <p class="sign-in-lead">Snap a garment on its hanger. Tidyrack gives it a clean catalogue picture and reads its type, colour, fabric, brand and size for you.</p>
@@ -102,7 +108,6 @@
           <button type="button" class="ghost small" id="cover-btn">Make cover</button>
           <button type="button" class="ghost small danger" id="delete-photo-btn">Delete photo</button>
         </div>
-        <button type="button" class="primary" id="done-btn" hidden>Done adding photos</button>
       </div>
       <div class="detail-body">
         <p class="status-note" id="detail-status"></p>
@@ -236,6 +241,28 @@
       <button class="ghost" value="separate" id="batch-separate"></button>
       <button class="ghost small" value="cancel">Cancel</button>
     </form>
+  </dialog>
+
+  <!-- Add item on a phone: the camera stays open, one tap per garment. -->
+  <dialog id="camera" aria-label="Camera">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-top">
+      <span id="camera-count"></span>
+      <button type="button" class="primary small" id="camera-done">Done</button>
+    </div>
+    <p class="camera-note" id="camera-note" hidden></p>
+    <div class="camera-bar">
+      <label class="camera-side" title="Pick photos from your library instead">
+        Library
+        <input type="file" id="camera-library" accept="image/*" multiple hidden>
+      </label>
+      <button type="button" class="shutter" id="camera-shot" aria-label="Take a photo of the next item"></button>
+      <button type="button" class="camera-side" id="camera-more" disabled
+              title="Another photo of the last item, such as its back or label">
+        <img id="camera-last" alt="" hidden>
+        <span>+ This one</span>
+      </button>
+    </div>
   </dialog>
 
   <div class="uploads" id="uploads" popover="manual">

@@ -948,7 +948,8 @@ def test_public_copy_sends_security_headers_on_every_response(store):
         assert res.headers["x-content-type-options"] == "nosniff"
         assert res.headers["strict-transport-security"].startswith("max-age=")
         assert res.headers["referrer-policy"] == "strict-origin-when-cross-origin"
-        assert "camera=()" in res.headers["permissions-policy"]
+        assert "camera=(self)" in res.headers["permissions-policy"]  # Add item's camera, and only ours
+        assert "microphone=()" in res.headers["permissions-policy"]
     personal = client(store, FakePipeline()).get("/")
     assert "content-security-policy" not in personal.headers  # the personal copy is as it was
 

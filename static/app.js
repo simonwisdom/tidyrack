@@ -208,6 +208,7 @@ function render() {
     : shown.length ? `${shown.length} of ${items.length}` : `None of ${items.length} match`;
   $("summary-row").hidden = !filtering();
   $("grid").replaceChildren(...shown.map(card));
+  fillCheckNotice();
 }
 
 function openMenu(key) {
@@ -311,7 +312,7 @@ function card(item) {
     const draft = document.createElement("span");
     draft.className = "badge draft";
     draft.textContent = "Draft";
-    draft.title = "Still adding photos: open it and tap Done adding photos";
+    draft.title = "Still adding photos: open it and close it again to finish it";
     el.append(draft);
   }
   if (item.plan === "upcycle") {
@@ -326,11 +327,20 @@ function card(item) {
 
 function openDetail(id, photoId = "") {
   if (!items.some((i) => i.id === id)) return;
+  if (openId !== id) finishDraft(openId);
   openId = id;
   $("detail").dataset.photo = photoId;
   history.replaceState(null, "", "#" + id);
   fillDetail();
   if (!$("detail").open) $("detail").showModal();
+}
+
+// Leaving a draft finishes it: its details are read again from all its photos.
+function finishDraft(id) {
+  if (!items.find((i) => i.id === id)?.draft) return;
+  api(`/api/items/${id}/finish`, { method: "POST" })
+    .then((item) => { replaceItem(item); render(); schedulePoll(); })
+    .catch((err) => toast("Couldn't finish it: " + err.message, 4000));
 }
 
 // Only the picture side, so polling never wipes fields being edited.
@@ -402,7 +412,6 @@ function fillImage() {
   $("label-toggle").parentElement.hidden = isShop || isWorn;
   $("cover-btn").hidden = photo.position === 0;
   $("delete-photo-btn").hidden = item.photos.length === 1;
-  $("done-btn").hidden = !item.draft;
 }
 
 function fillDetail() {
@@ -410,11 +419,13 @@ function fillDetail() {
   if (!item) return;
   fillImage();
 
-  $("detail-status").textContent =
-    item.draft ? "Add the back, a label close-up or anything else, then tap Done adding photos. The details so far come from the first photo." :
+  const place = checkQueue.indexOf(item.id);
+  $("detail").classList.toggle("checking", place >= 0);
+  $("detail-status").textContent = (place >= 0 ? `New item ${place + 1} of ${checkQueue.length}. ` : "") + (
+    item.draft ? "Add the back or a label close-up if you like. When you close this, the details are read from all its photos." :
     item.status === "processing" ? "Still working out the details…" :
     item.status === "failed" ? `Something went wrong: ${item.error}` :
-    item.unchecked.length ? "Highlighted fields are the model's guesses. Fix them or tap All correct." : "";
+    item.unchecked.length ? "Highlighted fields are the model's guesses. Fix them or tap All correct." : "");
   $("detail-status").className = "status-note " + item.status;
   // Reads the details again from the photos; fields already fixed or ticked are kept.
   $("retry-btn").hidden = item.draft || item.status === "processing";
@@ -622,6 +633,215 @@ async function addPhotos(files, kind) {
 
 $("uploads-close").onclick = hideUploads;
 
+// Add item on a phone opens Tidyrack's own camera, which stays open: each tap of
+// the shutter is a new item, + This one adds the next shot to the last item. Photos
+// upload one after another behind it, and each item is finished when the next one
+// starts or the camera closes. Elsewhere, and on plain http, Add item opens the picker.
+const cam = {
+  stream: null,
+  queue: Promise.resolve(), // uploads, one after another, in the order taken
+  last: null, // the id of the latest item started here
+  added: [], // ids of the items started here
+  sending: 0,
+  failed: [], // shots that didn't upload: { blob, same }
+};
+
+const useCamera = () => window.isSecureContext && !!navigator.mediaDevices?.getUserMedia
+  && matchMedia("(pointer: coarse)").matches;
+
+async function openCamera() {
+  Object.assign(cam, { last: null, added: [], sending: 0, failed: [] });
+  $("camera-last").hidden = true;
+  $("camera-more").disabled = true;
+  fillCamera();
+  $("camera").showModal();
+  await startStream();
+}
+
+async function startStream() {
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 2560 }, height: { ideal: 1920 } },
+      audio: false,
+    });
+    $("camera-video").srcObject = cam.stream;
+    $("camera-shot").disabled = false;
+  } catch (err) {
+    $("camera-shot").disabled = true;
+    cameraNote("Tidyrack can't use the camera (" + err.message + "). Allow it in Settings, or tap Library.");
+  }
+}
+
+function stopStream() {
+  cam.stream?.getTracks().forEach((t) => t.stop());
+  cam.stream = null;
+  $("camera-video").srcObject = null;
+}
+
+function cameraNote(text) {
+  $("camera-note").textContent = text;
+  $("camera-note").hidden = !text;
+}
+
+function fillCamera() {
+  const n = cam.added.length;
+  $("camera-count").textContent = [n ? `${n} added` : "Point at the next item",
+    cam.sending && `${cam.sending} uploading`].filter(Boolean).join(" · ");
+  if (cam.failed.length) cameraNote(`${cam.failed.length} didn't upload. Tap here to try again.`);
+  else if ($("camera-note").textContent.includes("didn't upload")) cameraNote("");
+}
+
+// The frame on screen as a JPEG, and a small copy for the + This one button.
+async function grab() {
+  const video = $("camera-video");
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  const small = document.createElement("canvas");
+  small.height = 96;
+  small.width = Math.round(96 * canvas.width / canvas.height);
+  small.getContext("2d").drawImage(canvas, 0, 0, small.width, small.height);
+  return { blob, thumb: small.toDataURL("image/jpeg", 0.7) };
+}
+
+async function shoot(same) {
+  if (!cam.stream || !$("camera-video").videoWidth) return;
+  const { blob, thumb } = await grab();
+  if (!blob) return;
+  $("camera-video").animate([{ opacity: 0.3 }, { opacity: 1 }], 180);
+  if (!same) {
+    $("camera-last").src = thumb;
+    $("camera-last").hidden = false;
+    $("camera-more").disabled = false;
+  }
+  queueShot({ blob, same });
+}
+
+function queueShot(shot) {
+  cam.sending++;
+  fillCamera();
+  cam.queue = cam.queue.then(() => sendShot(shot));
+}
+
+async function sendShot(shot) {
+  const file = new File([shot.blob], "camera.jpg", { type: "image/jpeg" });
+  try {
+    if (shot.same && cam.last) {
+      replaceItem(await api(`/api/items/${cam.last}/photos`, { method: "POST", body: photoForm(file, "photo") }));
+      render();
+      schedulePoll();
+    } else {
+      const before = cam.last;
+      const item = await api("/api/items", { method: "POST", body: photoForm(file, "photo") });
+      cam.last = item.id;
+      cam.added.push(item.id);
+      showNew(item);
+      if (before) await finishShot(before);
+    }
+  } catch (err) {
+    cam.failed.push(shot);
+  } finally {
+    cam.sending--;
+    fillCamera();
+  }
+}
+
+async function finishShot(id) {
+  try {
+    replaceItem(await api(`/api/items/${id}/finish`, { method: "POST" }));
+    render();
+    schedulePoll();
+  } catch {
+    // It stays a draft with its photos in; opening and closing it finishes it.
+  }
+}
+
+async function closeCamera() {
+  if (cam.failed.length && !cam.leaving) {
+    cam.leaving = true;
+    cameraNote(`${cam.failed.length} didn't upload. Tap here to try again, or Done to leave without them.`);
+    return;
+  }
+  cam.leaving = false;
+  stopStream();
+  $("camera").close();
+  await cam.queue;
+  if (cam.last) await finishShot(cam.last);
+  offerCheck(cam.added);
+}
+
+$("camera-shot").onclick = () => shoot(false);
+$("camera-more").onclick = () => shoot(true);
+$("camera-done").onclick = closeCamera;
+$("camera").oncancel = (e) => { e.preventDefault(); closeCamera(); };
+$("camera-note").onclick = () => {
+  if (!cam.failed.length) return;
+  const again = cam.failed;
+  cam.failed = [];
+  cam.leaving = false;
+  again.forEach(queueShot);
+};
+$("camera-library").onchange = async (e) => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  if (!files.length) return;
+  await closeCamera();
+  if (!$("camera").open) await upload(files);
+};
+// The phone stops the camera while Tidyrack is in the background; start it again on return.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && $("camera").open
+      && !cam.stream?.getVideoTracks().some((t) => t.readyState === "live")) startStream();
+});
+
+$("add-btn").onclick = (e) => {
+  if (e.target.id === "photo-input" || !useCamera()) return;
+  e.preventDefault();
+  openCamera();
+};
+
+// After the camera: the new items' guesses, checked one at a time.
+let checkIds = []; // items from the last camera run
+let checkQueue = []; // the ones being checked now, in order
+const needsCheck = (item) => item && !item.draft
+  && (item.unchecked.length > 0 || item.status === "failed" || item.status === "processing");
+
+function offerCheck(ids) {
+  checkIds = ids;
+  render();
+}
+
+function fillCheckNotice() {
+  const left = checkIds.filter((id) => needsCheck(items.find((i) => i.id === id)));
+  $("check-new").hidden = !left.length || $("camera").open;
+  $("check-new-text").textContent = left.length === 1 ? "1 new item to check."
+    : `${left.length} new items to check, one at a time.`;
+}
+
+$("check-new-go").onclick = () => {
+  checkQueue = checkIds.filter((id) => needsCheck(items.find((i) => i.id === id)));
+  if (checkQueue.length) openDetail(checkQueue[0]);
+};
+$("check-new-close").onclick = () => { checkIds = []; render(); };
+
+// After All correct or Save: the next new item to check, or back to the list.
+function nextToCheck() {
+  const at = checkQueue.indexOf(openId);
+  const next = at < 0 ? null : checkQueue.slice(at + 1).find((id) => needsCheck(items.find((i) => i.id === id)));
+  if (!next) {
+    if (at >= 0) toast("All the new items are checked", 2500);
+    checkQueue = [];
+    $("detail").close();
+    return;
+  }
+  $("detail").dataset.view = "";
+  openDetail(next);
+  $("detail").querySelector(".detail-body")?.scrollTo(0, 0);
+  $("detail").scrollTo(0, 0);
+}
+
 // Photo actions all answer with the updated item.
 async function photoAction(path, options, keepSelection = true) {
   try {
@@ -654,12 +874,6 @@ for (const input of document.querySelectorAll(".add-photo")) {
     input.value = "";
   };
 }
-
-$("done-btn").onclick = async () => {
-  await photoAction(`/api/items/${openId}/finish`, { method: "POST" });
-  const item = items.find((i) => i.id === openId);
-  if (item && item.photos.length > 1) toast("Reading the details from all the photos…", 2500);
-};
 
 $("label-toggle").onchange = () => {
   const photo = selectedPhoto(items.find((i) => i.id === openId));
@@ -706,7 +920,7 @@ $("detail-form").onsubmit = async (e) => {
   e.preventDefault();
   try {
     await save();
-    $("detail").close();
+    nextToCheck();
   } catch (err) {
     toast("Couldn't save: " + err.message, 4000);
   }
@@ -715,7 +929,7 @@ $("detail-form").onsubmit = async (e) => {
 $("confirm-all-btn").onclick = async () => {
   const item = items.find((i) => i.id === openId);
   await save({ checked: item.unchecked });
-  $("detail").close();
+  nextToCheck();
 };
 
 $("delete-btn").onclick = async () => {
@@ -736,7 +950,9 @@ $("tidy-btn").onclick = () => {
 
 $("close-btn").onclick = () => $("detail").close();
 $("detail").onclose = () => {
+  finishDraft(openId);
   openId = null;
+  checkQueue = [];
   $("detail").dataset.view = "";
   $("detail").dataset.photo = "";
   history.replaceState(null, "", location.pathname);
