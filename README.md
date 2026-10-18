@@ -110,3 +110,7 @@ The tests use a fake model, so they run offline and cost nothing. GitHub runs th
 ## Keeping a server on master
 
 `deploy/` is how the hosted copy's sibling, a personal copy on a small Linux server, follows this repo: `tidyrack-follow.timer` runs `deploy/follow.sh` every 2 minutes as the server's `agent` user. It fetches master, runs the tests, installs, restarts `tidyrack.service` and checks the page answers; a commit that fails its tests stays out, and one that doesn't come up is rolled back. Install steps are at the top of `deploy/tidyrack-follow.timer`. From your computer, `./run.sh deploy` tests, pushes master and waits until the server runs it (`TIDYRACK_VPS` is the server's SSH name). `deploy/counts.py` prints read-only usage counts from a public copy's database.
+
+## License
+
+[MIT](LICENSE). The Inter Tight font in `static/fonts` is under the SIL Open Font License (`static/fonts/OFL.txt`).
