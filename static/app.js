@@ -580,19 +580,22 @@ function showNew(item) {
   schedulePoll();
 }
 
-// The first photo starts a draft item and opens it, so the next photos go onto it.
-// Several photos at once make one item from all of them, or one item each.
+// A photo becomes a finished item in the list, without opening it, so the next
+// garment is two taps away: Add item, then its photo. Several photos at once make
+// one item from all of them, or one item each. Either way the new items join
+// "N new items to check"; a back or label can still go on later with + Photo.
 async function upload(files) {
-  const mode = files.length > 1 ? await askBatch(files.length) : "one";
+  const mode = files.length > 1 ? await askBatch(files.length) : "separate";
   if (mode === "cancel") return;
 
   if (mode === "separate") {
-    // Each is finished straight away: nothing more is coming for it.
+    const added = [];
     await sendAll(files, async (file) => {
       const item = await api("/api/items", { method: "POST", body: photoForm(file, "photo") });
+      added.push(item.id);
       // If only the finish fails, the photo is in: keep the draft rather than upload it twice.
       showNew(await api(`/api/items/${item.id}/finish`, { method: "POST" }).catch(() => item));
-    }, async () => {});
+    }, async () => offerCheck(added));
     return;
   }
 
@@ -601,9 +604,8 @@ async function upload(files) {
     item = await api(item ? `/api/items/${item.id}/photos` : "/api/items", { method: "POST", body: photoForm(file, "photo") });
     showNew(item);
   }, async () => {
-    if (files.length > 1 && item.draft) showNew(item = await api(`/api/items/${item.id}/finish`, { method: "POST" }));
-    if (openId !== item.id) openDetail(item.id);
-    else refreshDetail();
+    if (item.draft) showNew(item = await api(`/api/items/${item.id}/finish`, { method: "POST" }));
+    offerCheck([item.id]);
   });
 }
 
@@ -802,14 +804,15 @@ $("add-btn").onclick = (e) => {
   openCamera();
 };
 
-// After the camera: the new items' guesses, checked one at a time.
-let checkIds = []; // items from the last camera run
+// After adding: the new items' guesses, checked one at a time.
+let checkIds = []; // items added since the page loaded, from the camera or Add item
 let checkQueue = []; // the ones being checked now, in order
 const needsCheck = (item) => item && !item.draft
   && (item.unchecked.length > 0 || item.status === "failed" || item.status === "processing");
 
+// New items join the ones not checked yet, so adding one at a time builds one list.
 function offerCheck(ids) {
-  checkIds = ids;
+  checkIds = [...checkIds.filter((id) => !ids.includes(id)), ...ids];
   render();
 }
 
