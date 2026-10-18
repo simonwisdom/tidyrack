@@ -371,6 +371,8 @@ function fillImage() {
   $("tidy-btn").hidden = isLabel || isShop;
   $("tidy-btn").disabled = working;
   $("tidy-btn").textContent = queued ? "Waiting to tidy…" : working ? "Tidying… about 30 s" : photo.tidy ? "Tidy again" : "Tidy up";
+  // Tidy again opens a box for the owner's own guidance, kept for this photo.
+  $("tidy-note").hidden = $("detail").dataset.noteFor !== photo.id || working || isLabel || isShop;
   $("image-note").textContent =
     isLabel ? "Label close-up: read for the details, not tidied." :
     isShop && photo.cutout_status !== "failed" ? "Shop photo from the product page: not tidied, and left out of Save photos." :
@@ -445,7 +447,9 @@ function fillDetail() {
     input.value = item[f.key] ?? "";
     input.dataset.initial = input.value;
     if (f.long) input.rows = 2;
-    if (f.key === "colour" && item.colour_hex) {
+    if (f.key === "type") {
+      row.append(name, input, typePicks(input));
+    } else if (f.key === "colour" && item.colour_hex) {
       const line = document.createElement("div");
       line.className = "colour-line";
       line.append(input, ...colourPickers(item));
@@ -459,6 +463,40 @@ function fillDetail() {
   fillPlan(item);
   const added = new Date(item.added_at);
   $("detail-added").textContent = "Added " + added.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Types to tap instead of typing: the ones already in the wardrobe, most used
+// first, then common ones, eight in all. Typing your own still works.
+const COMMON_TYPES = ["T-shirt", "Shirt", "Button-up shirt", "Sweater", "Hoodie", "Jacket", "Jeans", "Trousers"];
+
+function typePicks(input) {
+  const counts = new Map();
+  for (const i of items) {
+    const name = i.type && sentence(i.type.trim().toLowerCase());
+    if (name) counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  const own = [...counts].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  const names = [...new Set([...own.slice(0, 6), ...COMMON_TYPES])].slice(0, 8);
+  const box = document.createElement("div");
+  box.className = "chips type-picks";
+  const mark = () => {
+    for (const b of box.children) b.classList.toggle("on", b.textContent.toLowerCase() === input.value.trim().toLowerCase());
+  };
+  box.append(...names.map((name) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = name;
+    b.onclick = (e) => {
+      e.preventDefault(); // inside the field's label: don't move focus to the text box
+      input.value = name.toLowerCase();
+      mark();
+    };
+    return b;
+  }));
+  input.addEventListener("input", mark);
+  mark();
+  return box;
 }
 
 // The colour swatches in the item view. Tapping one opens the phone's colour
@@ -947,8 +985,26 @@ $("retry-btn").onclick = () => photoAction(`/api/items/${openId}/retry`, { metho
 
 $("tidy-btn").onclick = () => {
   const photo = selectedPhoto(items.find((i) => i.id === openId));
+  const open = $("detail").dataset.noteFor === photo.id;
+  $("detail").dataset.noteFor = open ? "" : photo.id;
+  $("tidy-note-text").value = photo.tidy_note || "";
+  fillImage();
+  if (!open) $("tidy-note-text").focus();
+};
+
+$("tidy-go").onclick = () => {
+  const photo = selectedPhoto(items.find((i) => i.id === openId));
   $("detail").dataset.view = "";
-  photoAction(`/api/photos/${photo.id}/tidy`, { method: "POST" });
+  $("detail").dataset.noteFor = "";
+  photoAction(`/api/photos/${photo.id}/tidy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ note: $("tidy-note-text").value }),
+  });
+};
+// Enter tidies rather than saving and closing the item.
+$("tidy-note-text").onkeydown = (e) => {
+  if (e.key === "Enter") { e.preventDefault(); $("tidy-go").click(); }
 };
 
 $("close-btn").onclick = () => $("detail").close();
@@ -958,6 +1014,7 @@ $("detail").onclose = () => {
   checkQueue = [];
   $("detail").dataset.view = "";
   $("detail").dataset.photo = "";
+  $("detail").dataset.noteFor = "";
   history.replaceState(null, "", location.pathname);
 };
 $("detail").onclick = (e) => { if (e.target === $("detail")) $("detail").close(); };

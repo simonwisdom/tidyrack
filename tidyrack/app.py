@@ -114,7 +114,7 @@ class Jobs:
                 # A worn photo's tidy draws only its garment, not the rest of the outfit.
                 part = photo["part"] if photo["kind"] == "worn" else None
                 key = self.key_for(self.store.get(photo["item_id"])["owner"])
-                png = timed(step, self.pipeline.tidy_up, self.jpeg(photo), part, key)
+                png = timed(step, self.pipeline.tidy_up, self.jpeg(photo), part, key, photo["tidy_note"])
             self.store.save_photo_image(photo_id, step, png)
         except Exception as exc:  # shown on the photo so you can try again
             if self.store.get_photo(photo_id):
@@ -243,6 +243,11 @@ class ItemChanges(BaseModel):
 
 class PhotoChanges(BaseModel):
     kind: str
+
+
+class TidyRequest(BaseModel):
+    # The owner's guidance for this photo's tidies; empty clears it.
+    note: str = Field("", max_length=ai.TIDY_NOTE_MAX)
 
 
 class ShopLink(BaseModel):
@@ -689,10 +694,12 @@ def create_app(store: Store, pipeline=ai, warm_up: bool = False, run=None,
         return store.get(photo["item_id"])
 
     @app.post("/api/photos/{photo_id}/tidy")
-    def tidy_photo(photo_id: str, user=Depends(current_user)):
+    def tidy_photo(photo_id: str, request: TidyRequest | None = None, user=Depends(current_user)):
         photo = photo_or_404(photo_id, user)
         if photo["kind"] not in ("photo", "worn"):
             raise HTTPException(400, "Label photos aren't tidied")
+        if request is not None and photo["tidy_status"] not in BUSY:
+            store.set_tidy_note(photo_id, request.note.strip() or None)
         if photo["tidy_status"] not in BUSY:
             jobs.queue(photo_id, "tidy")
         return store.get(photo["item_id"])

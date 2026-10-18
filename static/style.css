@@ -116,6 +116,11 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   font-size: 14px;
 }
 .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.type-picks .chip { color: var(--text); }
+.type-picks .chip.on { color: var(--bg); }
+.tidy-note { display: flex; gap: 8px; width: 100%; }
+.tidy-note[hidden] { display: none; }
+.tidy-note input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); }
 .dims { display: contents; }
 .dd {
   flex: none;

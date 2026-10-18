@@ -279,29 +279,36 @@ def write_howto(jpegs: list[bytes], details: str, change: str, key: str | None =
 
 TIDY_PROMPT = (
     "Change only this, keep everything else identical: turn this into a clean catalogue photo of the garment: "
-    "plain light grey background, no hanger or room, garment laid flat and centred, gently smoothed. "
+    "plain light grey background, no hanger or room, garment laid flat and centred, gently smoothed, "
+    "with rolled-up sleeves or trouser legs unrolled to their full length. "
     "Keep its exact colours, print, text, logos and labels. Don't add labels or details that aren't there."
 )
 # A crop from a photo of someone wearing an outfit shows bits of the other garments.
 TIDY_WORN_PROMPT = (
     "This photo shows part of a person wearing clothes. Draw only the {part} they are wearing, "
     "as a clean catalogue photo: plain light grey background, no person, hands, phone or room, "
-    "no other garments, laid flat and centred, gently smoothed. "
+    "no other garments, laid flat and centred, gently smoothed, "
+    "with rolled-up sleeves or trouser legs unrolled to their full length. "
     "Keep its exact colours, print, text, logos and labels. Don't add labels or details that aren't there."
 )
+# The owner's own words for one tidy, such as "keep the sleeves rolled"; they win over the above.
+TIDY_NOTE = " The owner asks for this, and it comes first where it differs from the above: {note}"
+TIDY_NOTE_MAX = 200
 CODEX_IMAGES = Path.home() / ".codex" / "generated_images"
 
 
-def tidy_up(jpeg: bytes, part: str | None = None, key: str | None = None) -> bytes:
+def tidy_up(jpeg: bytes, part: str | None = None, key: str | None = None, note: str | None = None) -> bytes:
     """Have Codex's image tool redraw the photo as a catalogue shot. Takes 30-40 seconds.
     With `part` ("top", "bottoms"...), the photo is a crop of someone wearing an
     outfit, and only that garment is drawn. With `key`, a Gemini image model through
-    OpenRouter on that key does it instead.
+    OpenRouter on that key does it instead. `note` is the owner's own guidance.
 
     The result is a new picture, not the garment's real pixels: small text such as
     labels and sizes can come out wrong.
     """
     prompt = TIDY_WORN_PROMPT.format(part=part) if part else TIDY_PROMPT
+    if note:
+        prompt += TIDY_NOTE.format(note=note)
     return redraw(jpeg, prompt, key)
 
 

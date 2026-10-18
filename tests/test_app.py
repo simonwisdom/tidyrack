@@ -48,13 +48,15 @@ class FakePipeline:
         self.outfit = []  # what split_outfit finds
         self.tidied_parts = []  # the garment each tidy was told to draw
         self.read_parts = []  # the garment each details read was told to describe
+        self.tidy_notes = []  # the owner's note each tidy was given
 
     def remove_background(self, jpeg):
         return self.cutout
 
-    def tidy_up(self, jpeg, part=None, key=None):
+    def tidy_up(self, jpeg, part=None, key=None, note=None):
         self.keys.append(("tidy", key))
         self.tidied_parts.append(part)
+        self.tidy_notes.append(note)
         if self.error:
             raise self.error
         if self.fail_tidy:
@@ -238,6 +240,27 @@ def test_tidy_failure_is_shown_and_can_be_retried(store):
     pipeline.fail_tidy = False
     item = c.post(f"/api/photos/{photo['id']}/tidy").json()
     assert item["photos"][0]["tidy_status"] == "ready"
+
+
+def test_a_tidy_note_is_kept_for_the_photos_tidies_until_cleared(store):
+    pipeline = FakePipeline()
+    c = client(store, pipeline)
+    photo = new_item(c)["photos"][0]
+    item = c.post(f"/api/photos/{photo['id']}/tidy", json={"note": " keep the sleeves rolled "}).json()
+    assert item["photos"][0]["tidy_note"] == "keep the sleeves rolled"
+    c.post(f"/api/photos/{photo['id']}/tidy")  # Tidy again without a body keeps the note
+    c.post(f"/api/photos/{photo['id']}/tidy", json={"note": ""})
+    assert pipeline.tidy_notes == [None, "keep the sleeves rolled", "keep the sleeves rolled", None]
+    assert c.post(f"/api/photos/{photo['id']}/tidy", json={"note": "x" * 201}).status_code == 422
+
+
+def test_tidy_prompt_unrolls_sleeves_and_puts_the_owners_note_first(monkeypatch):
+    prompts = []
+    monkeypatch.setattr(ai, "redraw", lambda jpeg, prompt, key=None: prompts.append(prompt))
+    ai.tidy_up(photo_bytes())
+    ai.tidy_up(photo_bytes(), note="keep the sleeves rolled")
+    assert "unrolled" in prompts[0] and "keep the sleeves rolled" not in prompts[0]
+    assert prompts[1].endswith("keep the sleeves rolled") and "comes first" in prompts[1]
 
 
 def test_delete_removes_item_and_all_its_files(store):

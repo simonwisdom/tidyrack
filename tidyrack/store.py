@@ -121,7 +121,7 @@ ADDED_COLUMNS = {"tidy": "text", "tidy_status": "text", "tidy_error": "text", "s
                  "listing": "text", "draft": "integer not null default 0", "colour_hex": "text",
                  "colour_hex_2": "text", "colour_hex_set_by_hand": "integer not null default 0",
                  "owner": "text"}  # the user's id in the public copy; null in the personal one
-ADDED_PHOTO_COLUMNS = {"part": "text"}
+ADDED_PHOTO_COLUMNS = {"part": "text", "tidy_note": "text"}  # tidy_note: the owner's words for its tidy
 # old_key_hash: sha256 of the key a returning user's sign-in replaced, until they've
 # deleted it at OpenRouter (an app can't delete keys itself).
 ADDED_USER_COLUMNS = {"old_key_hash": "text"}
@@ -371,6 +371,11 @@ class Store:
         with self._connect() as db:
             row = db.execute("select * from photos where id = ?", (photo_id,)).fetchone()
         return dict(row) if row else None
+
+    def set_tidy_note(self, photo_id: str, note: str | None) -> None:
+        """What the owner asked the tidy to do, such as keep the sleeves rolled; kept for every tidy after."""
+        with self._connect() as db:
+            db.execute("update photos set tidy_note = ? where id = ?", (note, photo_id))
 
     def photo_step(self, photo_id: str, step: str, status: str, error: str | None = None) -> None:
         """Set where the cutout or tidy of a photo has got to."""
