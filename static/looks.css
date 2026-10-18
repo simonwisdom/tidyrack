@@ -1,0 +1,44 @@
+/* Outfits (static/looks.js), in the app's look: ink blue on cool white, Inter Tight headings. */
+.looks { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.looks h2 { margin: 0 40px 0 0; font: 600 24px/1.2 var(--display); color: var(--accent); }
+.looks h3 { margin: 8px 0 4px; font: 600 16px/1.3 var(--display); }
+.looks p { margin: 0; }
+
+.looks-tabs { display: flex; gap: 6px; overflow-x: auto; }
+.looks-tabs button {
+  min-height: 34px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; cursor: pointer; white-space: nowrap;
+}
+.looks-tabs button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.looks-panel { display: flex; flex-direction: column; gap: 12px; }
+
+.look-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.look-dots { display: flex; gap: 8px; }
+.swatch.big { width: 28px; height: 28px; margin: 0; vertical-align: middle; }
+.look-pieces { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.look-pieces figure { margin: 0; width: 150px; display: flex; flex-direction: column; gap: 4px; }
+.look-pieces img {
+  width: 150px; height: 170px; object-fit: contain; padding: 8px;
+  background: var(--tile); border-radius: var(--radius);
+}
+.look-pieces figcaption { font-size: 13px; color: var(--muted); text-align: center; }
+.look-pieces .plus { font-size: 26px; color: var(--muted); }
+.look-why { text-align: center; color: var(--muted); font-size: 14px; }
+.look-why::first-letter { text-transform: uppercase; }
+.look-drawn { display: block; max-width: 100%; max-height: 60dvh; margin: 0 auto; border-radius: var(--radius); }
+.look-drawn.sketch { background: #fff; }
+.look-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.look-headline { font: 600 18px/1.35 var(--display); }
+.look-missing { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.look-missing a { color: var(--accent); }
+
+/* style.css hides most top-bar buttons on a phone; Looks is for the phone too. */
+@media (max-width: 640px) {
+  .bar #looks-btn { display: inline-flex; }
+  .bar-actions { flex-wrap: wrap; }  /* five buttons don't fit one phone row */
+}
+
+@media (max-width: 560px) {
+  .look-pieces figure, .look-pieces img { width: 100px; }
+  .look-pieces img { height: 120px; }
+}

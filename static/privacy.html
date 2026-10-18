@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Privacy — Tidyrack</title>
+  <meta name="description" content="What Tidyrack keeps, where, for how long, and how to delete it.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#fafafb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1218" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <h1><a class="home wordmark" href="/">Tidyrack</a></h1>
+  </header>
+
+  <main class="page">
+    <h1>Privacy</h1>
+    <p>Tidyrack is a small app made by Simon Wisdom. This page says what it keeps about you, where, for how long,
+      and how to delete it.</p>
+
+    <h2>What Tidyrack keeps</h2>
+    <ul>
+      <li><strong>Your photos</strong>, and the pictures made from them: a cut-out on a plain background and an
+        AI-tidied catalogue picture, and any What if I… pictures you ask for (the garment redrawn by AI dyed or
+        altered). An <strong>Outfit</strong> photo of you is kept whole as well, for
+        <strong>On me</strong>, with any AI pictures of you wearing one of your items that you ask On me for.</li>
+      <li><strong>Your items' details</strong>: type, colour, fabric, brand, size, what you paid, your notes, and any
+        Vinted listing it wrote for you, whether you plan to keep, upcycle or sell it, and an upcycle's how-to.</li>
+      <li><strong>Your OpenRouter key.</strong> When you sign in, OpenRouter gives Tidyrack a key that lets it use
+        AI on your account. It's stored encrypted, with your OpenRouter user id, so your items are there next time.
+        Tidyrack never sees your OpenRouter password or payment details.</li>
+      <li><strong>One sign-in cookie</strong> (<code>tidyrack_session</code>), which keeps you signed in. It lasts
+        90 days from your last visit. While you're signing in, a second cookie holds the sign-in's check for up to
+        10 minutes. There are no tracking or advertising cookies, and no analytics.</li>
+      <li><strong>When you added each photo</strong> in the last day, for the daily limit of photos.</li>
+    </ul>
+    <p>Your browser also remembers your filters and sort order, on your device only.</p>
+
+    <h2>Where it's kept</h2>
+    <p>On <a href="https://railway.com">Railway</a>'s servers in its EU West region (the Netherlands). Railway is
+      an American company. The cut-outs are made there too.</p>
+    <p>To read an item's details, write a Vinted listing, tidy a picture, draw a What if I… picture or draw an item
+      on you (On me, which also sends the Outfit photo you picked), Tidyrack sends the item's photos
+      through <a href="https://openrouter.ai">OpenRouter</a> to Google's Gemini models, on your own OpenRouter
+      account. Both are American companies; what they keep is set by your OpenRouter account and its
+      <a href="https://openrouter.ai/settings/privacy">privacy settings</a>, and by
+      <a href="https://openrouter.ai/privacy">OpenRouter's privacy policy</a>. When you add an item from a link,
+      Tidyrack fetches that shop page itself.</p>
+    <p>Railway keeps short-lived server logs, as any host does: which page was asked for and when, not your photos.</p>
+
+    <h2>How long</h2>
+    <p>Until you delete it. Deleting a photo, an Outfit photo, an On me picture or an item deletes its pictures
+      straight away. If Tidyrack closes,
+      I'll delete everything.</p>
+
+    <h2 id="delete">Deleting it</h2>
+    <p>Signed in, scroll to the bottom of Tidyrack and tap <strong>Delete my account</strong>. That deletes all your
+      items, photos and pictures, your stored key and your sign-ins, at once, and signs you out. To keep a copy
+      first, use <strong>Export</strong>, which gives you everything as one zip.</p>
+    <p>The key OpenRouter made for Tidyrack lives in your OpenRouter account, and an app isn't allowed to delete
+      it. After deleting your account, Tidyrack links you to it; you can also delete it any time in
+      <a href="https://openrouter.ai/settings/keys">OpenRouter's key settings</a> (it's called "Tidyrack").</p>
+
+    <h2>Feedback</h2>
+    <p>If you send feedback, I keep your message, the page you sent it from, and your email if you give one, so I
+      can read and answer it. Your IP address is stored only as a one-way hash, to stop spam. I delete feedback
+      when the project closes.</p>
+
+    <h2>Your rights</h2>
+    <p>You can ask what I hold about you, or ask me to delete it, at
+      <a href="mailto:simonwisdom@duck.com">simonwisdom@duck.com</a>. If you're unhappy with the answer, you can
+      complain to the <a href="https://ico.org.uk/make-a-complaint/">ICO</a>.</p>
+
+    <p class="hint">Last updated 15 October 2026.</p>
+  </main>
+
+  <footer class="foot">
+    <a href="/">Back to Tidyrack</a>
+  </footer>
+</body>
+</html>

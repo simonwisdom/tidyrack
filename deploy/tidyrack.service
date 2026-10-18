@@ -1,0 +1,20 @@
+# Tidyrack on the VPS, as the agent user. Install:
+#   cp deploy/tidyrack.service ~/.config/systemd/user/ && systemctl --user enable --now tidyrack
+# (The folder ~/code/wardrobe and the data in ~/wardrobe-data keep their old names on purpose.)
+# Share it on the tailnet (as an admin user, once; Tailscale remembers it):
+#   sudo tailscale serve --bg --https=10000 http://127.0.0.1:8760
+# PATH includes Node's folder because codex starts with #!/usr/bin/env node.
+[Unit]
+Description=Tidyrack
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/code/wardrobe
+Environment=PATH=%h/.local/bin:%h/.local/share/mise/installs/node/lts/bin:/usr/local/bin:/usr/bin:/bin
+Environment=TIDYRACK_DATA=%h/wardrobe-data
+ExecStart=%h/.local/bin/uv run --frozen uvicorn tidyrack.app:app --host 127.0.0.1 --port 8760
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

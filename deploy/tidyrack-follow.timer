@@ -1,0 +1,11 @@
+# The VPS follows master on GitHub. Install, as agent, once:
+#   cp deploy/tidyrack-follow.* ~/.config/systemd/user/ && systemctl --user daemon-reload && systemctl --user enable --now tidyrack-follow.timer
+[Unit]
+Description=Tidyrack: check GitHub for a new master every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

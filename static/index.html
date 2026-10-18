@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tidyrack</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#fafafb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1218" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="looks.css">
+</head>
+<body>
+  <header class="bar">
+    <h1 class="wordmark">Tidyrack</h1>
+    <div class="bar-actions">
+      <button type="button" class="ghost" id="sign-out-btn" hidden>Sign out</button>
+      <a class="ghost" id="export-btn" href="/api/export" download title="Download everything as one zip">Export</a>
+      <button type="button" class="ghost" id="phone-btn" title="Open this on your phone">Phone</button>
+      <button type="button" class="ghost" id="looks-btn" title="Outfits from your clothes: Dress me, Copy a look, Missing piece, Morning card">Looks</button>
+      <button type="button" class="ghost" id="link-btn" title="Add an item from a shop's product page">From link</button>
+      <label class="ghost" id="outfit-btn" title="Photograph yourself wearing an outfit: each garment becomes its own item">
+        Outfit
+        <input type="file" id="outfit-input" accept="image/*" hidden>
+      </label>
+      <label class="primary" id="add-btn">
+        Add item
+        <input type="file" id="photo-input" accept="image/*" multiple hidden>
+      </label>
+    </div>
+  </header>
+
+  <div class="notice" id="old-key" hidden>
+    <span>You signed in again, so OpenRouter made a new key for Tidyrack. Your old one still works until you
+      <a id="old-key-link" target="_blank" rel="noopener">delete it at OpenRouter</a>.</span>
+    <button type="button" class="ghost small" id="old-key-done">Done</button>
+  </div>
+
+  <section class="sign-in" id="sign-in" hidden>
+    <h2 class="sign-in-title">Your wardrobe, catalogued from a photo</h2>
+    <p class="sign-in-lead">Snap a garment on its hanger. Tidyrack gives it a clean catalogue picture and reads its type, colour, fabric, brand and size for you.</p>
+    <!-- loading=lazy: the personal copy never shows this screen, so it never fetches these. -->
+    <div class="before-after">
+      <figure><img src="/landing/shirt-photo.jpg" alt="A brown corduroy shirt on a hanger against a door" width="480" height="640" loading="lazy"><figcaption>Your photo</figcaption></figure>
+      <span class="arrow" aria-hidden="true">→</span>
+      <figure><img src="/landing/shirt-tidy.jpg" alt="The same shirt as a clean catalogue picture" width="480" height="640" loading="lazy"><figcaption>In Tidyrack</figcaption></figure>
+    </div>
+    <a class="primary" href="/auth/openrouter">Sign in with OpenRouter</a>
+    <ul class="features">
+      <li><b>Find anything</b> Search and filter by type, colour, brand or size.</li>
+      <li><b>Sell on Vinted</b> A listing written for you: title, description and a price.</li>
+      <li><b>A whole outfit at once</b> One mirror selfie becomes an item for each piece.</li>
+      <li><b>Yours to keep</b> Export every picture and detail as one zip.</li>
+    </ul>
+    <p class="sign-in-note">Uses your own OpenRouter account: about $0.07 a garment.</p>
+  </section>
+
+  <div class="filters">
+    <input type="search" id="search" placeholder="Search type, colour, fabric, brand, size" autocomplete="off">
+    <div class="chips" id="chips">
+      <div class="dims" id="dims"></div>
+      <label class="dd" id="sort-box">Sort <select id="sort"></select></label>
+    </div>
+  </div>
+  <div class="menu" id="menu" hidden></div>
+
+  <main>
+    <div class="summary-row" id="summary-row">
+      <span class="summary" id="summary"></span>
+      <button type="button" class="link" id="clear-btn">Clear all</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden>
+      <p>No clothes yet.</p>
+      <p>Tap <strong>Add item</strong> and photograph one piece, laid flat or hung up.</p>
+    </div>
+  </main>
+
+  <dialog id="detail">
+    <form method="dialog" id="detail-form">
+      <div class="detail-image">
+        <img id="detail-img" alt="">
+        <p class="image-note" id="image-note"></p>
+        <div class="image-bar">
+          <div class="views" id="views"></div>
+          <button type="button" class="ghost small" id="tidy-btn">Tidy up</button>
+        </div>
+        <div class="strip" id="strip">
+          <div class="thumbs" id="thumbs"></div>
+          <label class="add-tile" title="Add a photo of the item, such as the back">
+            + Photo
+            <input type="file" class="add-photo" data-kind="photo" accept="image/*" multiple hidden>
+          </label>
+          <label class="add-tile" title="Add a close-up of a brand, size or care label">
+            + Label
+            <input type="file" class="add-photo" data-kind="label" accept="image/*" multiple hidden>
+          </label>
+        </div>
+        <div class="photo-actions">
+          <label class="check"><input type="checkbox" id="label-toggle"> Label close-up</label>
+          <button type="button" class="ghost small" id="cover-btn">Make cover</button>
+          <button type="button" class="ghost small danger" id="delete-photo-btn">Delete photo</button>
+        </div>
+        <button type="button" class="primary" id="done-btn" hidden>Done adding photos</button>
+      </div>
+      <div class="detail-body">
+        <p class="status-note" id="detail-status"></p>
+        <div class="fields" id="fields"></div>
+        <div class="field plan" id="plan">
+          <span>Plan</span>
+          <div class="plan-row">
+            <div class="plan-choices" id="plan-choices"></div>
+            <button type="button" class="ghost small" id="what-if-btn">What if I…</button>
+          </div>
+          <p class="what-if-nudge" id="what-if-nudge" hidden><button type="button" class="link" id="what-if-link"></button></p>
+        </div>
+        <section class="goal" id="goal" hidden>
+          <div class="goal-head">
+            <img id="goal-img" alt="">
+            <div>
+              <h3 id="goal-label"></h3>
+              <p class="hint" id="goal-cost"></p>
+            </div>
+          </div>
+          <h4>You'll need</h4>
+          <ul id="goal-materials"></ul>
+          <h4>Steps</h4>
+          <ol id="goal-steps"></ol>
+        </section>
+        <p class="added" id="detail-added"></p>
+        <div class="detail-actions">
+          <button type="button" class="danger ghost" id="delete-btn">Delete</button>
+          <button type="button" class="ghost" id="retry-btn" hidden>Try again</button>
+          <button type="button" class="ghost" id="sell-btn">Sell on Vinted</button>
+          <button type="button" class="ghost" id="onme-btn">Try it on me</button>
+          <span class="spacer"></span>
+          <button type="button" class="ghost" id="confirm-all-btn">All correct</button>
+          <button type="submit" class="primary" value="save">Save</button>
+        </div>
+      </div>
+      <button type="button" class="close" id="close-btn" aria-label="Close">×</button>
+    </form>
+  </dialog>
+
+  <dialog id="sell">
+    <form method="dialog" class="sell-form">
+      <h2>Sell on Vinted</h2>
+      <p class="status-note" id="sell-status"></p>
+      <div id="sell-body" hidden>
+        <div class="sell-photos" id="sell-photos"></div>
+        <div class="sell-options">
+          <label class="check"><input type="checkbox" id="sell-tidy"> Include the AI-tidied picture (redrawn by AI)</label>
+        </div>
+        <p class="hint">Vinted can suspend accounts for misleading or edited photos, so Save photos shares the photos as taken: no cutouts, and no AI picture unless you add it.</p>
+        <label class="field">
+          <span>Title <button type="button" class="ghost small copy" data-copy="sell-title">Copy</button></span>
+          <input id="sell-title" maxlength="100">
+        </label>
+        <label class="field">
+          <span>Description <button type="button" class="ghost small copy" data-copy="sell-description">Copy</button></span>
+          <textarea id="sell-description" rows="6"></textarea>
+        </label>
+        <dl class="facts" id="sell-facts"></dl>
+      </div>
+      <div class="detail-actions">
+        <button type="button" class="ghost" id="sell-again">Write again</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" id="sell-save-photos">Save photos</button>
+        <a class="primary" id="sell-open" href="https://www.vinted.co.uk/items/new" target="_blank" rel="noopener">Open Vinted</a>
+      </div>
+      <button type="button" class="close" id="sell-close" aria-label="Close">×</button>
+    </form>
+  </dialog>
+
+  <dialog id="onme">
+    <form method="dialog" class="sell-form">
+      <h2>On me</h2>
+      <p class="status-note" id="onme-status"></p>
+      <div class="onme-pair" id="onme-pair">
+        <figure><img id="onme-selfie" alt="Your Outfit photo"><figcaption>Your Outfit photo</figcaption></figure>
+        <figure><div class="onme-result" id="onme-result"></div><figcaption id="onme-caption"></figcaption></figure>
+      </div>
+      <div id="onme-picker-box">
+        <p class="hint">Your Outfit photos</p>
+        <div class="onme-picker" id="onme-picker"></div>
+      </div>
+      <p class="hint">Drawn by AI from your Outfit photo, so it's a guess at the fit, not a photo. It's never offered as a Vinted photo.</p>
+      <div class="detail-actions">
+        <button type="button" class="ghost small danger" id="onme-delete-selfie">Delete this Outfit photo</button>
+        <span class="spacer"></span>
+        <button type="button" class="primary" id="onme-go">Try it on</button>
+      </div>
+      <button type="button" class="close" id="onme-close" aria-label="Close">×</button>
+    </form>
+  </dialog>
+
+  <dialog id="what-if">
+    <form method="dialog" class="sell-form">
+      <h2>What if I…</h2>
+      <div class="what-if-head">
+        <p class="hint" id="what-if-name"></p>
+        <button type="button" class="ghost small" id="what-if-all">Show me all</button>
+      </div>
+      <div class="what-if-grid" id="what-if-grid"></div>
+      <div class="what-if-own">
+        <input id="what-if-text" maxlength="200" placeholder="Your own idea: …added elbow patches" autocomplete="off">
+        <button type="button" class="ghost" id="what-if-draw">Show me</button>
+      </div>
+      <p class="hint">Drawn by AI to help you decide, so details can differ. These pictures never go in Save photos for Vinted.</p>
+      <p class="status-note" id="what-if-status"></p>
+      <div class="what-if-actions">
+        <button type="button" class="ghost" id="what-if-keep">Keep</button>
+        <button type="button" class="primary" id="what-if-upcycle" disabled>Upcycle</button>
+        <button type="button" class="ghost" id="what-if-sell">Sell</button>
+      </div>
+      <button type="button" class="close" id="what-if-close" aria-label="Close">×</button>
+    </form>
+  </dialog>
+
+  <dialog id="phone">
+    <form method="dialog">
+      <h2>Add from your phone</h2>
+      <p>With Tailscale on, scan this or open the address below. It works on any network, only on your devices.</p>
+      <div id="qr"></div>
+      <p class="mono" id="phone-url"></p>
+      <button class="primary" value="close">Done</button>
+    </form>
+  </dialog>
+
+  <dialog id="batch">
+    <form method="dialog">
+      <h2 id="batch-title"></h2>
+      <p>Are they all of one piece of clothing, or one photo for each piece?</p>
+      <button class="primary" value="one" id="batch-one"></button>
+      <button class="ghost" value="separate" id="batch-separate"></button>
+      <button class="ghost small" value="cancel">Cancel</button>
+    </form>
+  </dialog>
+
+  <div class="uploads" id="uploads" popover="manual">
+    <div class="uploads-text">
+      <span id="uploads-text"></span>
+      <progress id="uploads-bar" max="1" value="0"></progress>
+    </div>
+    <button type="button" class="ghost small" id="uploads-retry" hidden>Try again</button>
+    <button type="button" class="ghost small" id="uploads-close" aria-label="Dismiss" hidden>×</button>
+  </div>
+
+  <dialog id="link">
+    <form class="sell-form" id="link-form">
+      <h2>Add from link</h2>
+      <p class="hint">Paste a shop's product page. The app takes its photo and details; you check them after.</p>
+      <label class="field">
+        <span>Product link</span>
+        <input id="link-url" type="url" inputmode="url" placeholder="https://" autocomplete="off" required>
+      </label>
+      <p class="status-note" id="link-status"></p>
+      <div class="detail-actions">
+        <span class="spacer"></span>
+        <button type="submit" class="primary" id="link-add">Add item</button>
+      </div>
+      <button type="button" class="close" id="link-close" aria-label="Close">×</button>
+    </form>
+  </dialog>
+
+  <!-- The public copy only: the personal copy keeps none of this. -->
+  <footer class="foot" id="foot" hidden>
+    <a href="/privacy.html">Privacy</a>
+    <button type="button" class="link" data-launch-feedback>Send feedback</button>
+    <button type="button" class="link danger" id="delete-account-btn">Delete my account</button>
+  </footer>
+
+  <dialog id="account">
+    <form method="dialog" class="sell-form" id="account-form">
+      <div class="account-step" id="account-ask">
+        <h2>Delete my account</h2>
+        <p>This deletes all your items, their photos and pictures, the details Tidyrack read, and the OpenRouter key
+          it keeps for you. Then it signs you out. It can't be undone.</p>
+        <p class="hint">Want a copy first? <a href="/api/export" download>Export everything</a> as one zip.</p>
+        <p class="status-note" id="account-status"></p>
+        <div class="detail-actions">
+          <span class="spacer"></span>
+          <button type="button" class="ghost" id="account-cancel">Cancel</button>
+          <button type="button" class="primary danger-fill" id="account-delete">Delete everything</button>
+        </div>
+      </div>
+      <div class="account-step" id="account-done" hidden>
+        <h2>Your account is deleted</h2>
+        <p>Tidyrack no longer has your items, photos or key.</p>
+        <p><strong>One last step only you can do:</strong> the key OpenRouter made for Tidyrack still works until you
+          delete it there. An app isn't allowed to delete it for you.</p>
+        <ul class="account-keys" id="account-keys"></ul>
+        <div class="detail-actions">
+          <span class="spacer"></span>
+          <button type="button" class="primary" id="account-finish">Done</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="looks">
+    <div class="looks">
+      <h2>Looks</h2>
+      <nav class="looks-tabs">
+        <button type="button" data-tab="dress">Dress me</button>
+        <button type="button" data-tab="copy">Copy a look</button>
+        <button type="button" data-tab="missing">Missing piece</button>
+        <button type="button" data-tab="morning">Morning card</button>
+      </nav>
+
+      <section class="looks-panel" data-tab="dress">
+        <p class="status-note" id="dress-count"></p>
+        <img class="look-drawn" id="dress-drawn" alt="The outfit drawn on a body" hidden>
+        <div class="look-stage" id="dress-stage"></div>
+        <p class="look-why" id="dress-why"></p>
+        <p class="status-note" id="dress-note"></p>
+        <div class="look-actions">
+          <button type="button" class="ghost" id="dress-shuffle">Shuffle</button>
+          <button type="button" class="ghost" id="dress-draw">See it on</button>
+          <button type="button" class="primary" id="dress-save">Save outfit</button>
+        </div>
+      </section>
+
+      <section class="looks-panel" data-tab="copy" hidden>
+        <p>Share a photo of an outfit you like. Tidyrack finds your closest pieces and says what's missing.</p>
+        <label class="primary">Choose an outfit photo<input type="file" id="copy-input" accept="image/*" hidden></label>
+        <p class="status-note" id="copy-note"></p>
+        <div id="copy-body" hidden>
+          <h3 id="copy-matched-title"></h3>
+          <div id="copy-matched"></div>
+          <h3 id="copy-missing-title">Missing</h3>
+          <ul class="look-missing" id="copy-missing"></ul>
+          <img class="look-drawn" id="copy-drawn" alt="Your version, drawn" hidden>
+          <div class="look-actions"><button type="button" class="ghost" id="copy-draw">Draw my version</button></div>
+        </div>
+      </section>
+
+      <section class="looks-panel" data-tab="missing" hidden>
+        <div id="missing-body">
+          <p class="look-headline"><span class="swatch big" id="missing-dot"></span> <span id="missing-headline"></span></p>
+          <p class="status-note" id="missing-next"></p>
+          <img class="look-drawn" id="missing-drawn" alt="The missing piece, drawn" hidden>
+          <p class="status-note" id="missing-note"></p>
+          <div class="look-actions">
+            <button type="button" class="ghost" id="missing-draw">Draw it</button>
+            <a class="primary" id="missing-vinted" target="_blank" rel="noopener">Find it on Vinted</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="looks-panel" data-tab="morning" hidden>
+        <label class="field"><span>Today's calendar (optional, one per line)</span>
+          <textarea id="morning-events" rows="2" placeholder="09:30 Client meeting"></textarea></label>
+        <div class="look-actions"><button type="button" class="primary" id="morning-go">Today's outfit</button></div>
+        <p class="look-headline" id="morning-line"></p>
+        <p class="status-note" id="morning-why"></p>
+        <div class="look-stage" id="morning-stage"></div>
+        <img class="look-drawn sketch" id="morning-drawn" alt="Today's outfit as a pencil sketch" hidden>
+        <p class="status-note" id="morning-note"></p>
+        <div class="look-actions"><button type="button" class="ghost" id="morning-sketch" hidden>Pencil sketch for e-ink</button></div>
+      </section>
+    </div>
+    <button type="button" class="close" id="looks-close" aria-label="Close">×</button>
+  </dialog>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="app.js"></script>
+  <script src="looks.js"></script>
+</body>
+</html>

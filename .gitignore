@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+data/
+.env
+
+# The author's own notes, kept on their Mac only.
+BUILDLOG.md
+PROJECT.md
+IMPLEMENTATION_PLAN.md
+docs/
+launch.yml
