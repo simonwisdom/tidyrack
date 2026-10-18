@@ -775,8 +775,19 @@ def create_app(store: Store, pipeline=ai, warm_up: bool = False, run=None,
         return {"url": url, "qr_svg": svg.getvalue().decode()}
 
     looks.add_routes(app, store, pipeline, run, key_for, current_user, read_upload, ai.env)
-    app.mount("/", StaticFiles(directory=ROOT / "static", html=True), name="static")
+    app.mount("/", Page(directory=ROOT / "static", html=True), name="static")
     return app
+
+
+class Page(StaticFiles):
+    """The page and its scripts and styles. Without a Cache-Control header, Safari
+    guesses how long to keep them and can run an old app.js against a new page;
+    no-cache makes it ask first, and an unchanged file comes back as a quick 304."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
 
 
 def tailscale_host() -> str | None:

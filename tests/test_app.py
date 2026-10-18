@@ -954,6 +954,15 @@ def test_public_copy_sends_security_headers_on_every_response(store):
     assert "content-security-policy" not in personal.headers  # the personal copy is as it was
 
 
+def test_page_and_its_scripts_are_checked_before_reuse(store):
+    # An old app.js cached against a new page broke uploads on an iPhone (18 Oct 2026).
+    c = client(store, FakePipeline())
+    for path in ("/", "/app.js", "/style.css", "/looks.js"):
+        res = c.get(path)
+        assert res.headers["cache-control"] == "no-cache", path
+        assert c.get(path, headers={"If-None-Match": res.headers["etag"]}).status_code == 304, path
+
+
 def test_privacy_page_is_linked_from_the_page(store):
     c = public_client(store, FakePipeline())
     assert 'href="/privacy.html"' in c.get("/").text
