@@ -40,7 +40,7 @@ It runs as a background service that starts at login and restarts if it crashes:
 ./run.sh           # or run it in this terminal instead
 ```
 
-Open http://127.0.0.1:8760. Logs go to `~/Library/Logs/tidyrack.log`. The first photo downloads the background-removal model (about 180 MB, once).
+The service gets the `TIDYRACK_*` and `OPENROUTER_API_KEY` settings of the terminal you run `./run.sh install` from; run it again after changing them. Open http://127.0.0.1:8760. Logs go to `~/Library/Logs/tidyrack.log`. The first photo downloads the background-removal model (about 180 MB, once).
 
 ## From your phone
 
@@ -83,7 +83,7 @@ Without `TIDYRACK_PUBLIC`, there's no sign-in and everything runs on the compute
 - **Dress me**: the best outfits, Shuffle through them, Save the ones you like. **See it on** draws the outfit on a person with the image model (Codex on your login; Gemini on the person's key in the public copy), in about a minute. Every Save and Shuffle is kept (`looks` table) so the scorer can learn your taste later.
 - **Copy a look**: choose a photo of an outfit you like. A vision model names each piece, Tidyrack finds your closest item by kind and colour, lists what's missing with a Vinted search, and **Draw my version** draws it in your clothes.
 - **Missing piece**: tries 44 everyday pieces (4 of them shoes) and shows the one that adds the most good outfits, with a Vinted search in your size and **Draw it**.
-- **Morning card**: today's weather (Open-Meteo, or MET Norway when it's busy; London unless `TIDYRACK_PLACE=lat,lon`; MET Norway gets the contact in `TIDYRACK_CONTACT`, the repo's address unless you set your own) and, if you type them, today's events pick one outfit; **Pencil sketch** draws it for the e-ink reader.
+- **Morning card**: today's weather (Open-Meteo, or MET Norway when it's busy; London unless `TIDYRACK_PLACE=lat,lon`; MET Norway gets the contact in `TIDYRACK_CONTACT`, the repo's address unless you set your own) and, if you type them, today's events pick one outfit; **Pencil sketch** draws it for an e-ink screen.
 
 Set `TIDYRACK_BODY` (e.g. "a man in his thirties") for who wears the outfit in the drawings; the default is "a person". The checks behind the colour and the scorer are `tests/colour_check.py` and `tests/outfit_check.py`.
 

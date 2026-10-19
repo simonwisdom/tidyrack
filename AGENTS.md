@@ -5,7 +5,7 @@ You're a coding agent helping a person run Tidyrack on their own computer and op
 1. **Check the basics.** `uv --version` (install from https://docs.astral.sh/uv/ if missing) and that this is a Mac; on Linux everything works except `./run.sh install`, so run it with `./run.sh` or their own service manager.
 2. **Install and test.** `uv sync`, then `uv run pytest -q`. The tests use a fake model: they're offline and free. Stop and report if they fail.
 3. **Check Codex.** Tidyrack reads details, tidies pictures and draws outfits through the `codex` CLI on the person's own ChatGPT login. Run `codex --version` and `codex login status`. Drawing needs a paid ChatGPT plan.
-   - If Codex isn't there and they don't want it, details can run on OpenRouter instead: they set `TIDYRACK_DETAILS=openrouter` and `OPENROUTER_API_KEY` (a paid key they make at openrouter.ai). Tidy-ups and drawings won't work without Codex; say so plainly.
+   - If Codex isn't there and they don't want it, details can run on OpenRouter instead: they set `TIDYRACK_DETAILS=openrouter` and `OPENROUTER_API_KEY` (a paid key they make at openrouter.ai) in the terminal they'll run `./run.sh install` from: the service keeps the settings it was installed with. Tidy-ups and drawings won't work without Codex; say so plainly.
    - Never ask them to paste a key into the chat; have them put it in the environment themselves.
 4. **Start it.** `./run.sh install` (a login service on macOS, logs in `~/Library/Logs/tidyrack.log`) or `./run.sh` in a terminal. Check http://127.0.0.1:8760 answers. The first photo downloads the cutout model (about 180 MB).
 5. **Reach it from the phone.** Ask which they want:

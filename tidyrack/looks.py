@@ -501,7 +501,7 @@ def add_routes(app, store, pipeline, run, key_for, current_user, read_upload, en
 
     @app.post("/api/looks/morning/sketch", status_code=202)
     def morning_sketch(outfit: Draw, user=Depends(current_user)):
-        """Draw today's outfit as a pencil sketch for the e-ink reader."""
+        """Draw today's outfit as a pencil sketch for an e-ink screen."""
         found = mine(user)
         if not outfit.items or any(i not in found for i in outfit.items):
             raise HTTPException(404, "No such item")

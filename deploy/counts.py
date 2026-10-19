@@ -1,6 +1,6 @@
-"""Read-only counts from the public copy's database, for Launchpad's weekly digest (it has no analytics).
+"""Read-only counts from the public copy's database, for a weekly digest (the app has no analytics).
 
-Launchpad runs this on Railway with `railway ssh`, with the start date as the one argument, and reads the one
+The digest runs this on the server, with the start date as the one argument, and reads the one
 line of JSON it prints. Counts only: no names, keys or photos leave the server.
 """
 

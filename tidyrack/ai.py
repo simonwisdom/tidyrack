@@ -33,7 +33,7 @@ UPLOAD_FORMATS = ["JPEG", "PNG", "WEBP"]  # what the public copy accepts
 
 
 def env(name: str, default=None):
-    """A TIDYRACK_<name> setting; the old WARDROBE_<name> still works."""
+    """A TIDYRACK_<name> setting; WARDROBE_<name>, from before Tidyrack had its name, still works."""
     return os.environ.get(f"TIDYRACK_{name}", os.environ.get(f"WARDROBE_{name}", default))
 
 PROMPT = """You are cataloguing one item of clothing. The attached photos all show the same item:
