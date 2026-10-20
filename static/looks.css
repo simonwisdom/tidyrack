@@ -32,12 +32,6 @@
 .look-missing { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
 .look-missing a { color: var(--accent); }
 
-/* style.css hides most top-bar buttons on a phone; Looks is for the phone too. */
-@media (max-width: 640px) {
-  .bar #looks-btn { display: inline-flex; }
-  .bar-actions { flex-wrap: wrap; }  /* five buttons don't fit one phone row */
-}
-
 @media (max-width: 560px) {
   .look-pieces figure, .look-pieces img { width: 100px; }
   .look-pieces img { height: 120px; }

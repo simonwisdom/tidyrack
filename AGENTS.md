@@ -9,7 +9,7 @@ You're a coding agent helping a person run Tidyrack on their own computer and op
    - Never ask them to paste a key into the chat; have them put it in the environment themselves.
 4. **Start it.** `./run.sh install` (a login service on macOS, logs in `~/Library/Logs/tidyrack.log`) or `./run.sh` in a terminal. Check http://127.0.0.1:8760 answers. The first photo downloads the cutout model (about 180 MB).
 5. **Reach it from the phone.** Ask which they want:
-   - **Anywhere** (recommended): Tailscale on the computer and the phone, signed in to the same account, then `./run.sh phone`. It needs the `tailscale` command on the PATH (the Mac app installs it from its settings) and HTTPS turned on for the tailnet in Tailscale's admin console. It prints the address; the **Phone** button in the app shows a QR code.
+   - **Anywhere** (recommended): Tailscale on the computer and the phone, signed in to the same account, then `./run.sh phone`. It needs the `tailscale` command on the PATH (the Mac app installs it from its settings) and HTTPS turned on for the tailnet in Tailscale's admin console. It prints the address; **Open on phone** in the app's ⋯ menu shows a QR code.
    - **Home Wi-Fi only**: `./run.sh stop` if the service is running, then `uv run uvicorn tidyrack.app:app --host 0.0.0.0 --port 8760`, and open `http://<computer's local address>:8760` on the phone. Tell them anyone on that network can then open it, and that over plain http Save photos downloads instead of opening the share sheet.
 6. **Tell them where their data is**: `data/` in this folder (or `TIDYRACK_DATA`). **Export** in the app downloads everything as a zip.
 

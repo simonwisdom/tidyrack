@@ -15,19 +15,30 @@
   <header class="bar">
     <h1 class="wordmark">Tidyrack</h1>
     <div class="bar-actions">
-      <button type="button" class="ghost" id="sign-out-btn" hidden>Sign out</button>
-      <a class="ghost" id="export-btn" href="/api/export" download title="Download everything as one zip">Export</a>
-      <button type="button" class="ghost" id="phone-btn" title="Open this on your phone">Phone</button>
       <button type="button" class="ghost" id="looks-btn" title="Outfits from your clothes: Dress me, Copy a look, Missing piece, Morning card">Looks</button>
-      <button type="button" class="ghost" id="link-btn" title="Add an item from a shop's product page">From link</button>
-      <label class="ghost" id="outfit-btn" title="Photograph yourself wearing an outfit: each garment becomes its own item">
-        Outfit
-        <input type="file" id="outfit-input" accept="image/*" hidden>
-      </label>
-      <label class="primary" id="add-btn">
-        Add item
-        <input type="file" id="photo-input" accept="image/*" multiple hidden>
-      </label>
+      <!-- Two small menus keep the bar on one row, on a phone too. -->
+      <div class="pop">
+        <button type="button" class="primary pop-toggle" aria-expanded="false" aria-controls="add-menu">Add <span class="caret" aria-hidden="true">▾</span></button>
+        <div class="pop-menu" id="add-menu" hidden>
+          <label class="pop-row" id="add-btn">
+            Photo of a garment<small>On its hanger or laid flat</small>
+            <input type="file" id="photo-input" accept="image/*" multiple hidden>
+          </label>
+          <label class="pop-row" id="outfit-btn">
+            Outfit selfie<small>Each piece becomes an item</small>
+            <input type="file" id="outfit-input" accept="image/*" hidden>
+          </label>
+          <button type="button" class="pop-row" id="link-btn">From a shop link<small>Paste a product page</small></button>
+        </div>
+      </div>
+      <div class="pop">
+        <button type="button" class="ghost pop-toggle dots" aria-expanded="false" aria-controls="more-menu" aria-label="More">⋯</button>
+        <div class="pop-menu" id="more-menu" hidden>
+          <button type="button" class="pop-row" id="phone-btn">Open on phone</button>
+          <a class="pop-row" id="export-btn" href="/api/export" download>Export everything<small>Every picture and detail, as one zip</small></a>
+          <button type="button" class="pop-row" id="sign-out-btn" hidden>Sign out</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -79,7 +90,7 @@
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>
       <p>No clothes yet.</p>
-      <p>Tap <strong>Add item</strong> and photograph one piece, laid flat or hung up.</p>
+      <p>Tap <strong>Add</strong>, then <strong>Photo of a garment</strong>, and photograph one piece, laid flat or hung up.</p>
     </div>
   </main>
 

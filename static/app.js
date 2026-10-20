@@ -957,6 +957,28 @@ window.addEventListener("scroll", closeMenu);
 window.addEventListener("resize", closeMenu);
 $("chips").addEventListener("scroll", closeMenu);
 
+// The top bar's Add and ⋯ menus: a tap on the button opens or closes its menu, and a
+// tap anywhere else closes it. A row closes it after its own click, so a label still
+// opens its file picker.
+function closePops(except) {
+  for (const toggle of document.querySelectorAll(".pop-toggle")) {
+    if (toggle === except) continue;
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.nextElementSibling.hidden = true;
+  }
+}
+document.addEventListener("click", (e) => {
+  const toggle = e.target.closest(".pop-toggle");
+  if (toggle) {
+    const open = toggle.nextElementSibling.hidden;
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.nextElementSibling.hidden = !open;
+  }
+  if (e.target.closest(".pop-menu")) setTimeout(closePops);
+  else closePops(toggle);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePops(); });
+
 $("detail-form").onsubmit = async (e) => {
   e.preventDefault();
   try {
