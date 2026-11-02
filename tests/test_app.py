@@ -105,6 +105,20 @@ def client(store, pipeline):
     return TestClient(create_app(store, pipeline, run=lambda lane, fn, *args: fn(*args)))
 
 
+def test_personal_copy_only_answers_its_own_hosts_and_pages(store):
+    c = client(store, FakePipeline())
+    # DNS rebinding: a page at an attacker's name that now points at this Mac.
+    assert c.get("/api/items", headers={"host": "evil.example.com:8760"}).status_code == 421
+    for host in ("127.0.0.1:8760", "localhost:8760", "[::1]:8760", "192.168.1.20:8760", "mac.tail1234.ts.net"):
+        assert c.get("/api/items", headers={"host": host}).status_code == 200, host
+    # Another site's page posting to the personal copy.
+    res = c.post("/api/items", headers={"host": "127.0.0.1:8760", "origin": "https://evil.example.com"})
+    assert res.status_code == 403
+    res = c.post("/api/items", headers={"host": "127.0.0.1:8760", "origin": "http://127.0.0.1:9999"})
+    assert res.status_code == 403
+    assert new_item(c)["status"]  # no Origin (and same-origin pages) still work
+
+
 def new_item(c, kind="photo"):
     res = c.post("/api/items", files={"photo": ("front.JPG", photo_bytes(), "image/jpeg")}, data={"kind": kind})
     assert res.status_code == 201

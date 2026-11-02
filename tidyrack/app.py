@@ -1,6 +1,7 @@
 """The web app: add photos, browse items, fix the model's guesses."""
 
 import io
+import ipaddress
 import json
 import logging
 import os
@@ -13,7 +14,7 @@ from datetime import date
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 import segno
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response, UploadFile
@@ -335,6 +336,24 @@ def create_app(store: Store, pipeline=ai, warm_up: bool = False, run=None,
         return photo
 
     links_guard, links_running = threading.Lock(), set()
+
+    @app.middleware("http")
+    async def personal_host_and_origin(request: Request, call_next):
+        """The personal copy has no sign-in, so only answer at its own addresses
+        (stops DNS rebinding: a web page whose name later points at this Mac) and
+        turn away changes sent from another site's page."""
+        if not public:
+            host = request.headers.get("host", "")
+            if not personal_host(host):
+                return JSONResponse({"detail": "Unknown host"}, status_code=421)
+            origin = request.headers.get("origin")
+            if origin is not None and request.method not in ("GET", "HEAD", "OPTIONS"):
+                # Pages can't set X-Forwarded-Host without a CORS preflight, so it's
+                # safe to accept a proxy's (tailscale serve) original host as well.
+                ours = {host.lower(), request.headers.get("x-forwarded-host", "").lower()} - {""}
+                if urlsplit(origin).netloc.lower() not in ours:
+                    return JSONResponse({"detail": "Cross-site request"}, status_code=403)
+        return await call_next(request)
 
     @app.middleware("http")
     async def sign_in_before_upload(request: Request, call_next):
@@ -795,6 +814,29 @@ class Page(StaticFiles):
         response = super().file_response(*args, **kwargs)
         response.headers.setdefault("Cache-Control", "no-cache")
         return response
+
+
+def personal_host(host: str) -> bool:
+    """Whether a Host header names the personal copy: localhost, an IP address
+    (Home Wi-Fi), a Tailscale or .local name, or a name in TIDYRACK_HOSTS (comma-separated).
+    A DNS-rebinding page sends its own domain name, which none of these match."""
+    if host.startswith("["):
+        name = host[1:host.find("]")] if "]" in host else ""
+    else:
+        name = host.rsplit(":", 1)[0]
+    name = name.lower().rstrip(".")
+    if not name:
+        return False
+    extra = {h.strip().lower() for h in (ai.env("HOSTS") or "").split(",") if h.strip()}
+    # testserver: the name FastAPI's TestClient sends in the tests.
+    # .ts.net and .local names come from Tailscale and the home network, not public DNS.
+    if name in {"localhost", "testserver"} | extra or name.endswith((".ts.net", ".local")):
+        return True
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        return False
 
 
 def tailscale_host() -> str | None:
