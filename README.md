@@ -44,7 +44,7 @@ You need a Mac, [uv](https://docs.astral.sh/uv/) and the [Codex CLI](https://git
 
 🤖 Or hand this repo to Codex or Claude Code: [AGENTS.md](AGENTS.md) walks it through the setup. Everything else is in the [guide](GUIDE.md).
 
-☁️ Rather not run it yourself? [tidyrack.simonwisdom.com](https://tidyrack.simonwisdom.com) is a hosted copy that runs on your own OpenRouter key.
+🔑 No ChatGPT plan? Reading details runs on your own [OpenRouter](https://openrouter.ai) key with `TIDYRACK_DETAILS=openrouter`; tidy-ups and drawings use Codex.
 
 ## No support, all yours
 
