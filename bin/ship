@@ -1,0 +1,96 @@
+#!/bin/bash
+# Ship this worktree's branch: test it, put it on master on GitHub, and wait for the VPS to put it live.
+# Run from a session's own worktree, only after Simon says ship:
+#   bin/ship           ship it
+#   bin/ship --check   everything up to the push (rebase, tests, the server's state), then stop
+# The VPS (ssh vps-agent, ~/code/wardrobe) runs deploy/follow.sh every 2 minutes: it pulls master,
+# runs the tests, restarts tidyrack and rolls back if it doesn't answer. This script only pushes and waits.
+# Ships queue on one lock, so sessions don't need to coordinate.
+set -euo pipefail
+die() { echo "ship: $*" >&2; exit 1; }
+CHECK=
+case "${1-}" in
+  "") ;;
+  --check) CHECK=1 ;;
+  *) die "usage: bin/ship [--check]; nothing shipped" ;;
+esac
+[ $# -le 1 ] || die "usage: bin/ship [--check]; nothing shipped"
+# Only the script's own tests change these.
+VPS="${TIDYRACK_SHIP_VPS:-vps-agent}"
+POLLS="${TIDYRACK_SHIP_POLLS:-48}"
+WAIT="${TIDYRACK_SHIP_WAIT:-10}"
+
+HERE="$(git rev-parse --show-toplevel)"
+COMMON="$(git rev-parse --path-format=absolute --git-common-dir)"
+MAIN="$(dirname "$COMMON")"
+BRANCH="$(git symbolic-ref --short -q HEAD)" || die "detached HEAD; create a branch first"
+[ "$HERE" != "$MAIN" ] || die "run this from a session worktree, not the main checkout"
+[ "$BRANCH" != master ] || die "you're on master; work on your own branch"
+[ -z "$(git status --porcelain)" ] || die "commit or discard your changes first"
+cd "$HERE"
+
+# A directory as the lock (macOS has no flock); a holder that died leaves its pid behind.
+LOCK="$COMMON/tidyrack-ship.lock"
+said=
+until mkdir "$LOCK" 2>/dev/null; do
+  pid="$(cat "$LOCK/pid" 2>/dev/null || true)"
+  if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then rm -rf "$LOCK"; continue; fi
+  holder="$(cat "$LOCK/branch" 2>/dev/null || echo 'another branch')"
+  [ "$holder" = "$said" ] || { echo "ship: waiting for the lock: $holder is shipping…"; said="$holder"; }
+  sleep 2
+done
+echo $$ > "$LOCK/pid"
+echo "$BRANCH" > "$LOCK/branch"
+trap 'rm -rf "$LOCK"' EXIT
+
+# Each phase prints as it starts, so a ship cut off by a time limit shows where it was.
+echo "ship: rebasing $BRANCH onto master from GitHub"
+GIT_TERMINAL_PROMPT=0 git fetch -q origin master
+git rebase -q origin/master || { git rebase --abort; die "conflicts with master: run 'git rebase origin/master', resolve, commit, then bin/ship again"; }
+[ -n "$(git diff --name-only origin/master HEAD)" ] || die "nothing to ship: this branch has nothing that isn't on master"
+
+echo "ship: running the tests"
+uv run --frozen pytest -q || die "tests fail after rebasing onto master (above); master hasn't moved"
+
+echo "ship: checking the server"
+ssh -o ConnectTimeout=15 "$VPS" '
+  cd ~/code/wardrobe
+  [ "$(git symbolic-ref --short -q HEAD)" = master ] || { echo "the server checkout is not on master" >&2; exit 1; }
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "the server checkout has changes of its own" >&2; exit 1; }
+  systemctl --user is-active tidyrack-follow.timer >/dev/null || { echo "tidyrack-follow.timer is not running, so nothing would pick up master" >&2; exit 1; }
+  systemctl --user is-active tidyrack >/dev/null || echo "note: tidyrack is not running on the server now" >&2
+' || die "the server isn't ready for a deploy (above; if ssh failed, run 'tailscale status | head -5'); master hasn't moved"
+
+if [ -n "$CHECK" ]; then
+  echo "ship: check passed: $BRANCH ($(git rev-parse --short HEAD)) rebases onto master, the tests pass and the server is ready; nothing pushed or deployed"
+  exit 0
+fi
+
+echo "ship: pushing to master on GitHub"
+GIT_TERMINAL_PROMPT=0 git push -q origin HEAD:master || die "couldn't push to master (did it just move? run bin/ship again)"
+WANT="$(git rev-parse HEAD)"
+
+# deploy/follow.sh writes the commit that came up to ~/.local/state/tidyrack/live, and one that didn't to .../failed.
+echo "ship: waiting for the server to put ${WANT:0:7} live (it looks every 2 minutes, then runs the tests; up to 8 minutes)"
+live= failed=
+for _ in $(seq "$POLLS"); do
+  read -r live failed <<<"$(ssh -o ConnectTimeout=15 "$VPS" 'cd ~/.local/state/tidyrack && echo "$(cat live 2>/dev/null) $(cat failed 2>/dev/null)"' || true)"
+  [ "$live" = "$WANT" ] && break
+  [ "${failed:-}" = "$WANT" ] && die "on master on GitHub, but the server rejected ${WANT:0:7} and still runs ${live:0:7}; see: ssh $VPS journalctl --user -u tidyrack-follow -n 30"
+  sleep "$WAIT"
+done
+[ "$live" = "$WANT" ] || die "on master on GitHub, but the server hasn't put ${WANT:0:7} live yet (it runs ${live:0:7}); see: ssh $VPS journalctl --user -u tidyrack-follow -n 30"
+
+echo "ship: checking tidyrack answers on the server"
+ssh -o ConnectTimeout=15 "$VPS" 'curl -fs -m 10 -o /dev/null http://127.0.0.1:8760/' \
+  || echo "ship: ${WANT:0:7} came up, but tidyrack doesn't answer now; see: ssh $VPS journalctl --user -u tidyrack -n 30" >&2
+
+# Keep the main checkout current when nobody is working in it.
+if [ "$(git -C "$MAIN" symbolic-ref --short -q HEAD)" = master ] && [ -z "$(git -C "$MAIN" status --porcelain --untracked-files=no)" ]; then
+  git -C "$MAIN" merge -q --ff-only origin/master || echo "ship: couldn't bring the main checkout up to date" >&2
+fi
+echo "ship: $BRANCH is on master (${WANT:0:7}) and live on the server"
+# The branch is on master now: stay on the same commit, detached, so the branch can go.
+GIT_TERMINAL_PROMPT=0 git fetch -q origin master
+git merge-base --is-ancestor HEAD origin/master && git switch -q --detach && git branch -q -D "$BRANCH" || echo "ship: couldn't delete branch $BRANCH" >&2
+echo "ship: every commit here is on master; remove the worktree with wt-done or ExitWorktree action=remove"

@@ -20,3 +20,4 @@ Don't set `TIDYRACK_PUBLIC`: that's for running a copy other people sign in to (
 - Python 3.11–3.13, FastAPI, SQLite; the front end is plain JavaScript in `static/`, no build step.
 - Only `tidyrack/store.py` touches storage. Model calls live in `tidyrack/ai.py`.
 - Run `uv run pytest -q` after each change.
+- Maintainer's copy: work in a worktree on your own branch. Once Simon says ship, run plain `bin/ship` from that worktree (`bin/ship --check` tries everything but the push): it rebases, tests, pushes master and waits until the VPS (`deploy/follow.sh`) has it live. Then remove the worktree with `wt-done`.
